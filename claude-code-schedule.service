@@ -1,0 +1,31 @@
+[Unit]
+Description=Claude Code Schedule - Automated Claude Code execution
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/root1/githubTools/claude-code-schedule
+ExecStart=/home/root1/githubTools/claude-code-schedule/target/release/ccschedule --loop-mode --ping-mode --log-dir /var/log/claude-code-schedule --pid-file /var/run/claude-code-schedule.pid
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=claude-code-schedule
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/claude-code-schedule /var/run
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Environment
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
