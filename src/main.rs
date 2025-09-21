@@ -34,7 +34,7 @@ struct Args {
     #[arg(short, long)]
     dry_run: bool,
 
-    /// Send a simple ping instead of running Claude Code
+    /// Query global weather information instead of running Claude Code
     #[arg(short, long)]
     ping_mode: bool,
 
@@ -95,7 +95,7 @@ async fn run_single_mode(args: &Args, logger: &Logger, target_time: DateTime<Loc
     if args.dry_run {
         println!("Would run at: {}", target_time.format("%Y-%m-%d %H:%M:%S"));
         if args.ping_mode {
-            println!("Action: Send ping");
+            println!("Action: Query global weather information");
         } else {
             println!("Command: {}", build_claude_command(&args.message));
         }
@@ -109,7 +109,7 @@ async fn run_single_mode(args: &Args, logger: &Logger, target_time: DateTime<Loc
         target_time.format("%Y-%m-%d %H:%M:%S")
     );
     if args.ping_mode {
-        println!("Action: Send ping");
+        println!("Action: Query global weather information");
     } else {
         println!("Command: {}", build_claude_command(&args.message));
     }
@@ -188,7 +188,7 @@ async fn run_loop_mode(args: &Args, logger: &Logger) -> Result<()> {
         println!("Loop mode dry run:");
         println!("Schedule: 7:00, 12:00, 17:00, 22:00, 03:00 (every 5 hours)");
         if args.ping_mode {
-            println!("Action: Send ping");
+            println!("Action: Query global weather information");
         } else {
             println!("Command: {}", build_claude_command(&args.message));
         }
@@ -199,7 +199,7 @@ async fn run_loop_mode(args: &Args, logger: &Logger) -> Result<()> {
     println!("Claude Code Schedule by Ian Macalinao - Loop Mode");
     println!("Schedule: 7:00, 12:00, 17:00, 22:00, 03:00 (every 5 hours)");
     if args.ping_mode {
-        println!("Action: Send ping");
+        println!("Action: Query global weather information");
     } else {
         println!("Command: {}", build_claude_command(&args.message));
     }
@@ -394,9 +394,10 @@ fn run_claude_command(message: &str) -> Result<String> {
     Ok(stdout.to_string())
 }
 
-fn run_ping(message: &str) -> Result<String> {
-    // In ping mode, we still run claude but capture the output
-    run_claude_command(message)
+fn run_ping(_message: &str) -> Result<String> {
+    // In ping mode, we use a specific weather query to consume more tokens
+    let weather_query = "请搜索今日全球天气信息，告诉我：1) 今天全世界最热的地方及其温度；2) 今天全世界最冷的地方及其温度；3) 这些地方的具体位置和当地时间；4) 简要分析造成这些极端温度的气象原因；5) 提供一些有趣的天气相关事实。请提供详细和准确的信息，包括数据来源。";
+    run_claude_command(weather_query)
 }
 
 #[cfg(test)]
