@@ -1,9 +1,12 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Timelike};
 use clap::Parser;
+use std::env;
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 use tokio::time::sleep;
+use which::which;
 
 mod logger;
 use logger::Logger;
@@ -91,7 +94,6 @@ async fn main() -> Result<()> {
 }
 
 async fn run_single_mode(args: &Args, logger: &Logger, target_time: DateTime<Local>) -> Result<()> {
-
     if args.dry_run {
         println!("Would run at: {}", target_time.format("%Y-%m-%d %H:%M:%S"));
         if args.ping_mode {
@@ -139,7 +141,8 @@ async fn run_single_mode(args: &Args, logger: &Logger, target_time: DateTime<Loc
                         println!("Response length: {} characters", response.len());
                     }
                     Err(e) => {
-                        if let Err(log_err) = logger.log_ping_error_with_cycle(&e.to_string(), None) {
+                        if let Err(log_err) = logger.log_ping_error_with_cycle(&e.to_string(), None)
+                        {
                             eprintln!("Warning: Failed to log ping error: {log_err}");
                         }
                         return Err(e);
@@ -155,7 +158,9 @@ async fn run_single_mode(args: &Args, logger: &Logger, target_time: DateTime<Loc
                         println!("Response length: {} characters", response.len());
                     }
                     Err(e) => {
-                        if let Err(log_err) = logger.log_claude_error_with_cycle(&e.to_string(), None) {
+                        if let Err(log_err) =
+                            logger.log_claude_error_with_cycle(&e.to_string(), None)
+                        {
                             eprintln!("Warning: Failed to log claude error: {log_err}");
                         }
                         return Err(e);
@@ -221,7 +226,10 @@ async fn run_loop_mode(args: &Args, logger: &Logger) -> Result<()> {
         let now = Local::now();
         let next_time = get_next_loop_time(now);
 
-        println!("Cycle {cycle_number} - Next execution: {}", next_time.format("%Y-%m-%d %H:%M:%S"));
+        println!(
+            "Cycle {cycle_number} - Next execution: {}",
+            next_time.format("%Y-%m-%d %H:%M:%S")
+        );
 
         // Wait until the next scheduled time
         loop {
@@ -253,14 +261,18 @@ async fn run_loop_mode(args: &Args, logger: &Logger) -> Result<()> {
         if args.ping_mode {
             match run_ping(&args.message) {
                 Ok(response) => {
-                    if let Err(e) = logger.log_ping_success_with_response(&response, Some(cycle_number)) {
+                    if let Err(e) =
+                        logger.log_ping_success_with_response(&response, Some(cycle_number))
+                    {
                         eprintln!("Warning: Failed to log ping success: {e}");
                     }
                     println!("Cycle {cycle_number} ping completed successfully!");
                     println!("Response length: {} characters", response.len());
                 }
                 Err(e) => {
-                    if let Err(log_err) = logger.log_ping_error_with_cycle(&e.to_string(), Some(cycle_number)) {
+                    if let Err(log_err) =
+                        logger.log_ping_error_with_cycle(&e.to_string(), Some(cycle_number))
+                    {
                         eprintln!("Warning: Failed to log ping error: {log_err}");
                     }
                     eprintln!("Cycle {cycle_number} ping failed: {e}");
@@ -269,14 +281,18 @@ async fn run_loop_mode(args: &Args, logger: &Logger) -> Result<()> {
         } else {
             match run_claude_command(&args.message) {
                 Ok(response) => {
-                    if let Err(e) = logger.log_claude_success_with_response(&response, Some(cycle_number)) {
+                    if let Err(e) =
+                        logger.log_claude_success_with_response(&response, Some(cycle_number))
+                    {
                         eprintln!("Warning: Failed to log claude success: {e}");
                     }
                     println!("Cycle {cycle_number} command completed successfully!");
                     println!("Response length: {} characters", response.len());
                 }
                 Err(e) => {
-                    if let Err(log_err) = logger.log_claude_error_with_cycle(&e.to_string(), Some(cycle_number)) {
+                    if let Err(log_err) =
+                        logger.log_claude_error_with_cycle(&e.to_string(), Some(cycle_number))
+                    {
                         eprintln!("Warning: Failed to log claude error: {log_err}");
                     }
                     eprintln!("Cycle {cycle_number} command failed: {e}");
@@ -353,10 +369,8 @@ fn write_pid_file(pid_file: &str) -> Result<()> {
     use std::io::Write;
 
     let pid = std::process::id();
-    let mut file = File::create(pid_file)
-        .context("Failed to create PID file")?;
-    writeln!(file, "{pid}")
-        .context("Failed to write PID to file")?;
+    let mut file = File::create(pid_file).context("Failed to create PID file")?;
+    writeln!(file, "{pid}").context("Failed to write PID to file")?;
 
     println!("PID file written: {pid_file} (PID: {pid})");
     Ok(())
@@ -379,15 +393,76 @@ fn build_claude_command(message: &str) -> String {
     )
 }
 
+fn resolve_claude_bin() -> Option<String> {
+    // 1) Explicit override
+    if let Ok(val) = env::var("CLAUDE_BIN") {
+        if !val.is_empty() && Path::new(&val).exists() {
+            return Some(val);
+        }
+    }
+
+    // 2) PATH lookup (works in interactive shells; may be minimal under launchd)
+    if let Ok(path) = which("claude") {
+        return Some(path.to_string_lossy().to_string());
+    }
+
+    // 3) Common macOS locations
+    #[cfg(target_os = "macos")]
+    {
+        let candidates = [
+            "/opt/homebrew/bin/claude", // Apple Silicon Homebrew
+            "/usr/local/bin/claude",    // Intel Homebrew / legacy
+        ];
+        for c in candidates.iter() {
+            if Path::new(c).exists() {
+                return Some((*c).to_string());
+            }
+        }
+        // NVM/NPM hints
+        if let Ok(nvm_bin) = env::var("NVM_BIN") {
+            let p = format!("{}/claude", nvm_bin);
+            if Path::new(&p).exists() {
+                return Some(p);
+            }
+        }
+        if let Ok(prefix) = env::var("NPM_CONFIG_PREFIX") {
+            let p = format!("{}/bin/claude", prefix);
+            if Path::new(&p).exists() {
+                return Some(p);
+            }
+        }
+    }
+
+    // 4) Linux common locations (harmless on macOS too)
+    let linux_candidates = [
+        "/usr/local/bin/claude",
+        "/usr/bin/claude",
+        "/snap/bin/claude",
+    ];
+    for c in linux_candidates.iter() {
+        if Path::new(c).exists() {
+            return Some((*c).to_string());
+        }
+    }
+
+    None
+}
+
 fn run_claude_command(message: &str) -> Result<String> {
-    let output = Command::new("claude")
+    let claude_bin = resolve_claude_bin().unwrap_or_else(|| "claude".to_string());
+
+    let output = Command::new(claude_bin)
         .args(["--dangerously-skip-permissions", message])
         .output()
         .context("Failed to execute claude command")?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("Claude command failed with exit code: {:?}\nError: {}", output.status.code(), stderr);
+        anyhow::bail!(
+            "Claude command failed with exit code: {:?}\nError: {}",
+            output.status.code(),
+            stderr
+        );
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);

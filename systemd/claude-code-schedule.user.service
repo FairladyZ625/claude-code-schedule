@@ -1,24 +1,18 @@
 [Unit]
-Description=Claude Code Schedule - Automated Claude Code execution
+Description=Claude Code Schedule (user) - Automated Claude Code execution
 After=network.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=root1
-Group=root1
 WorkingDirectory=/home/root1/githubTools/claude-code-schedule
-# Ensure Claude CLI is available under systemd
+# Ensure the Claude CLI is found under systemd user session
 Environment=CLAUDE_BIN=/home/root1/.nvm/versions/node/v22.18.0/bin/claude
 Environment=PATH=/home/root1/.nvm/versions/node/v22.18.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-Environment=RUST_LOG=info
 ExecStart=/home/root1/githubTools/claude-code-schedule/target/release/ccschedule --loop-mode --ping-mode --log-dir /home/root1/githubTools/claude-code-schedule/logs
-ExecStop=/bin/kill -TERM $MAINPID
 Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=claude-code-schedule
+RestartSec=5
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
+

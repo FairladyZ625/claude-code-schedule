@@ -148,13 +148,13 @@ impl Logger {
         self.log(entry)
     }
 
-    pub fn log_ping_error_with_cycle(&self, error_msg: &str, cycle_number: Option<u32>) -> Result<()> {
-        let entry = LogEntry::error_with_response(
-            "ping",
-            Some(error_msg.to_string()),
-            None,
-            cycle_number,
-        );
+    pub fn log_ping_error_with_cycle(
+        &self,
+        error_msg: &str,
+        cycle_number: Option<u32>,
+    ) -> Result<()> {
+        let entry =
+            LogEntry::error_with_response("ping", Some(error_msg.to_string()), None, cycle_number);
         self.log(entry)
     }
 
@@ -187,7 +187,11 @@ impl Logger {
         self.log(entry)
     }
 
-    pub fn log_claude_error_with_cycle(&self, error_msg: &str, cycle_number: Option<u32>) -> Result<()> {
+    pub fn log_claude_error_with_cycle(
+        &self,
+        error_msg: &str,
+        cycle_number: Option<u32>,
+    ) -> Result<()> {
         let entry = LogEntry::error_with_response(
             "claude",
             Some(error_msg.to_string()),

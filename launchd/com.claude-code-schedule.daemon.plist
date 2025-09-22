@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.claude-code.schedule</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/REPLACE_WITH_USERNAME/githubTools/claude-code-schedule/target/release/ccschedule</string>
+        <string>--loop-mode</string>
+        <string>--ping-mode</string>
+        <string>--log-dir</string>
+        <string>/Users/REPLACE_WITH_USERNAME/Library/Logs/claude-code-schedule</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/REPLACE_WITH_USERNAME/githubTools/claude-code-schedule</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- Ensure Claude CLI is found under launchd (no interactive zsh PATH) -->
+        <key>CLAUDE_BIN</key>
+        <string>/opt/homebrew/bin/claude</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <!-- Keep the process running; it manages its own schedule internally -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Run as a specific user (system-level daemon) -->
+    <key>UserName</key>
+    <string>REPLACE_WITH_USERNAME</string>
+
+    <!-- Logs (stdout/err). The app itself also writes JSON logs to log-dir -->
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/claude-code-schedule/daemon.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/claude-code-schedule/daemon.err.log</string>
+</dict>
+</plist>
+
